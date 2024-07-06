@@ -38,7 +38,7 @@ const login = async (userName, password) => {
         throw new Error('Incorrect password');
     }
 
-    const token = jwt.sign({ username: userName }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ username: userName, userId: user.id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
     return { message: 'User logged in successfully', token };
 };
 
