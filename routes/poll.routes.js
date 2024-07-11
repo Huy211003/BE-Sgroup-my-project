@@ -12,5 +12,6 @@ router.get('/:pollId', authenticateToken.authenticateToken, pollController.getPo
 router.post('/:pollId/options', authenticateToken.authenticateToken, pollController.createOption);
 router.post('/:pollId/vote', authenticateToken.authenticateToken, pollController.vote);
 router.delete('/:pollId/vote', authenticateToken.authenticateToken, pollController.unVote);
+router.post('/:pollId/change-vote', authenticateToken.authenticateToken, pollController.changeVote);
 
 module.exports = router;

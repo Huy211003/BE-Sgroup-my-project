@@ -97,6 +97,24 @@ const unVote = async (req, res) => {
     }
 }
 
+const changeVote = async (req, res) => {
+    try {
+        const { pollId } = req.params;
+        const { newOptionId } = req.body;
+        const userId = req.user.user_id;
+
+        const deleteQuery = 'DELETE s FROM submission s JOIN options o ON s.option_id = o.option_id WHERE s.user_id = ? AND o.poll_id = ?';
+        await db.execute(deleteQuery, [userId, pollId]);
+
+        const insertQuery = 'INSERT INTO submission (user_id, option_id) VALUES (?,?)';
+        await db.execute(insertQuery, [userId, newOptionId]);
+
+        res.status(200).json({ message: 'Vote changed successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server error' });
+    }
+}
 module.exports = {
     createPoll,
     createOption,
@@ -105,4 +123,5 @@ module.exports = {
     updatePoll,
     deletePoll,
     getPoll,
+    changeVote,
 };
