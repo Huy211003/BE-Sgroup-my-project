@@ -5,8 +5,36 @@ const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const mailService = require('../services/mail.services');
 
+const USERNAME_REGEX = /^[a-zA-Z0-9_-]+$/;
+
+const validateEmail = (email) => {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email);
+}
+
+const validatePassword = (password) => {
+    return password.length >= 6;
+}
+
 const register = async (req, res) => {
     const { username, password, email } = req.body;
+
+    if (!email || !username || !password) {
+        return res.status(400).json({ message: 'All fields are required' })
+    }
+
+    if (!validatePassword(password)) {
+        return res.status(400).json({ message: 'Password must be at least 6 characters' })
+    }
+
+    if (!validateEmail(email)) {
+        return res.status(400).json({ message: 'Email is invalid' })
+    }
+
+    if (!USERNAME_REGEX.test(username)) {
+        return res.status(400).json({ message: 'Username must contain only letters, numbers, underscores, and dashes' });
+    }
+
     try {
         const result = await authService.register(username, password, email);
         res.status(200).json(result);
@@ -17,6 +45,11 @@ const register = async (req, res) => {
 
 const login = async (req, res) => {
     const { username, password } = req.body;
+
+    if (!username || !password) {
+        return res.status(400).json({ message: 'All fields are required' })
+    }
+
     try {
         const result = await authService.login(username, password);
         res.status(200).json(result);
@@ -36,6 +69,15 @@ const getAllUsers = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
     const { email } = req.body;
+
+    if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+    }
+
+    if (!validateEmail(email)) {
+        return res.status(400).json({ message: 'Email is invalid' });
+    }
+
     try {
         const [user] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
         if (user.length === 0) {
@@ -65,10 +107,23 @@ const forgotPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
     const { email, passwordResetToken, newPassword } = req.body;
+
+    if (!email || !passwordResetToken || !newPassword) {
+        return res.status(400).json({ message: 'All fields are required' });
+    }
+
+    if (!validateEmail(email)) {
+        return res.status(400).json({ message: 'Email is invalid' });
+    }
+
+    if (!validatePassword(newPassword)) {
+        return res.status(400).json({ message: 'New password must be at least 6 characters long' })
+    }
+
     try {
         const [user] = await db.execute('SELECT * FROM users WHERE email = ? AND passwordResetToken = ?', [email, passwordResetToken]);
-        if (user.length === 0 && user[0].passwordResetExpiration < new Date()) {
-            return res.status(400).json({ message: 'Invalid or expired token' })
+        if (user.length === 0 || (user.length > 0 && user[0].passwordResetExpiration < new Date())) {
+            return res.status(400).json({ message: 'Invalid or expired token' });
         }
 
         const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -79,6 +134,7 @@ const resetPassword = async (req, res) => {
         res.status(500).json({ error: error.message });
     }
 }
+
 module.exports = {
     register,
     login,

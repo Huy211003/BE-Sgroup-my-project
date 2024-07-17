@@ -1,9 +1,20 @@
 const db = require('../database/connection');
 
+const TITLE_REGEX = /^[a-zA-Z0-9\s]*$/;
+
 const createPoll = async (req, res,) => {
     try {
         // console.log('req.user:', req.user);
         const { title } = req.body;
+
+        if (!title) {
+            return res.status(400).json({ message: 'Title is required and must be a string' });
+        }
+
+        if (!TITLE_REGEX.test(title)) {
+            return res.status(400).json({ message: 'Title must not contain special characters' });
+        }
+
         const userId = req.user.user_id;
         const query = 'INSERT INTO polls (title, user_id, createdAt, isLocked) VALUES (?, ?, NOW(), false)';
         const [result] = await db.execute(query, [title, userId])
@@ -18,6 +29,15 @@ const updatePoll = async (req, res) => {
     try {
         const { pollId } = req.params;
         const { title } = req.body;
+
+        if (!pollId || !title) {
+            return res.status(400).json({ message: 'Poll ID and title are required and must be strings' });
+        }
+
+        if (!TITLE_REGEX.test(title)) {
+            return res.status(400).json({ message: 'Title must not contain special characters' });
+        }
+
         const query = 'UPDATE polls SET title = ? WHERE poll_id = ?';
         const [result] = await db.execute(query, [title, pollId]);
         res.status(200).json({ message: 'Poll updated successfully', result });
@@ -30,6 +50,11 @@ const updatePoll = async (req, res) => {
 const deletePoll = async (req, res) => {
     try {
         const { pollId } = req.params;
+
+        if (!pollId) {
+            return res.status(400).json({ message: 'Poll ID is required' });
+        }
+
         const query = 'DELETE FROM polls WHERE poll_id = ?';
         const [result] = await db.execute(query, [pollId]);
         res.status(200).json({ message: 'Poll deleted successfully', result });
@@ -42,6 +67,11 @@ const deletePoll = async (req, res) => {
 const getPoll = async (req, res) => {
     try {
         const { pollId } = req.params;
+
+        if (!pollId) {
+            return res.status(400).json({ message: 'Poll ID is required' });
+        }
+
         const query = 'SELECT * FROM polls WHERE poll_id = ?';
         const [rows] = await db.execute(query, [pollId]);
 
@@ -61,6 +91,11 @@ const createOption = async (req, res) => {
     try {
         const { content } = req.body;
         const { pollId } = req.params;
+
+        if (!content || !pollId) {
+            return res.status(400).json({ message: 'Content and Poll ID are required and must be strings' });
+        }
+
         const query = 'INSERT INTO options (content, createdAt, poll_id) VALUES (?, NOW(), ?)';
         await db.execute(query, [content, pollId]);
         res.status(201).json({ message: 'Option created successfully' });
@@ -74,8 +109,19 @@ const vote = async (req, res) => {
     try {
         const { optionId } = req.body;
         const userId = req.user.user_id;
-        const query = 'INSERT INTO submission (user_id, option_id) VALUES (?, ?)';
-        await db.execute(query, [userId, optionId]);
+
+        if (!optionId || !userId || optionId <= 0 || userId <= 0) {
+            return res.status(400).json({ message: 'Invalid optionId or userId' });
+        }
+
+        const checkOptionQuery = 'SELECT * FROM options WHERE option_id = ?';
+        const [optionRows] = await db.execute(checkOptionQuery, [optionId]);
+        if (optionRows.length === 0) {
+            return res.status(404).json({ message: 'Option not found' });
+        }
+
+        const insertQuery = 'INSERT INTO submission (user_id, option_id) VALUES (?, ?)';
+        await db.execute(insertQuery, [userId, optionId]);
         res.status(200).json({ message: 'Vote submitted successfully' });
     } catch (error) {
         console.error(error);
@@ -87,9 +133,14 @@ const unVote = async (req, res) => {
     try {
         const { pollId } = req.params;
         const userId = req.user.user_id;
-        const query = 'DELETE s FROM submission s JOIN options o ON s.option_id = o.option_id WHERE s.user_id = ? AND o.poll_id = ?';
+
+        if (!pollId || !userId || pollId <= 0 || userId <= 0) {
+            return res.status(400).json({ message: 'Invalid pollId or userId' });
+        }
+
+        const deleteQuery = 'DELETE s FROM submission s JOIN options o ON s.option_id = o.option_id WHERE s.user_id = ? AND o.poll_id = ?';
         const values = [userId, pollId]
-        const [result] = await db.execute(query, values);
+        const [result] = await db.execute(deleteQuery, values);
         res.status(200).json({ message: 'Vote cancelled successfully', result });
     } catch (error) {
         console.error(error);
@@ -103,8 +154,18 @@ const changeVote = async (req, res) => {
         const { newOptionId } = req.body;
         const userId = req.user.user_id;
 
+        if (!pollId || !newOptionId || !userId || pollId <= 0 || newOptionId <= 0 || userId <= 0) {
+            return res.status(400).json({ message: 'Invalid pollId, newOptionId, or userId' });
+        }
+
         const deleteQuery = 'DELETE s FROM submission s JOIN options o ON s.option_id = o.option_id WHERE s.user_id = ? AND o.poll_id = ?';
         await db.execute(deleteQuery, [userId, pollId]);
+
+        const checkOptionQuery = 'SELECT * FROM options WHERE option_id = ?';
+        const [optionRows] = await db.execute(checkOptionQuery, [newOptionId]);
+        if (optionRows.length === 0) {
+            return res.status(404).json({ message: 'New option not found' });
+        }
 
         const insertQuery = 'INSERT INTO submission (user_id, option_id) VALUES (?,?)';
         await db.execute(insertQuery, [userId, newOptionId]);
