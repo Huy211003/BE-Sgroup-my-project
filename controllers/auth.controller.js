@@ -1,7 +1,7 @@
 const authService = require('../services/auth.services');
 const middleware = require('../middleware/auth');
 const db = require('../database/connection');
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const crypto = require('crypto');
 const mailService = require('../services/mail.services');
 
