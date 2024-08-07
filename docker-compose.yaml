@@ -1,0 +1,32 @@
+version: '3.8'
+services:
+  database-mysql: 
+    image: mysql:8.0
+    restart: always
+    env_file:
+      - .env
+    environment:
+      - MYSQL_DATABASE=${DB_NAME}
+      - MYSQL_ROOT_PASSWORD=${DB_PASS}
+    ports:
+      - "3307:3306" # ánh xạ cổng từ máy chủ (host) đến container
+    expose:
+        - 3306 # cổng này chỉ được sử dụng bởi các dịch vụ khác trong cùng mạng Docker
+
+  backend:
+    depends_on:
+        - database-mysql
+    image: nh011/myapp:latest
+    restart: always
+    environment:
+      # - DB_HOST=host.docker.internal
+      - DB_HOST=database-mysql
+      - DB_PORT=3306
+    env_file:
+      - .env
+    ports:
+      - "3000:3000"
+
+# docker compose -p sgroup-nh11-nodejs-mysql up -d
+# docker compose up -d
+# docker ps

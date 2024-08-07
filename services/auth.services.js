@@ -1,4 +1,4 @@
-const bcrypt = require('bcrypt');
+const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('../database/connection');
 require('dotenv').config();
@@ -38,7 +38,7 @@ const login = async (userName, password) => {
         throw new Error('Incorrect password');
     }
 
-    const token = jwt.sign({ username: userName }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ username: userName, user_id: user.user_id }, process.env.ACCESS_TOKEN_SECRET, { expiresIn: '1h' });
     return { message: 'User logged in successfully', token };
 };
 
