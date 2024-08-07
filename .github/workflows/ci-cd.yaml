@@ -42,19 +42,18 @@ jobs:
           # cache-to: type=local,dest=/tmp/.buildx-cache
 
       - name: ci-cd
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
-        run: |
-          echo "$SSH_PRIVATE_KEY" > private_key.pem
-          chmod 600 private_key.pem
-          ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@3-104-204-58 << 'EOF'
-            
-            sudo docker stop ubuntu_backend_1 || true
-            sudo docker stop ubuntu_database-mysql_1 || true
-            sudo docker rm ubuntu_backend_1 || true
-            sudo docker rm ubuntu_database-mysql_1 || true
-        
-            sudo docker pull nh011/myapp:latest
+  env:
+    SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+  run: |
+    echo "$SSH_PRIVATE_KEY" > private_key.pem
+    chmod 600 private_key.pem
+    ssh -i private_key.pem -o StrictHostKeyChecking=no ubuntu@ec2-3-104-204-58.ap-southeast-2.compute.amazonaws.com << 'EOF'
+      sudo docker stop ubuntu_backend_1 || true
+      sudo docker stop ubuntu_database-mysql_1 || true
+      sudo docker rm ubuntu_backend_1 || true
+      sudo docker rm ubuntu_database-mysql_1 || true
 
-            sudo docker compose up -d
-          EOF
+      sudo docker pull nh011/myapp:latest
+
+      sudo docker compose up -d
+    EOF
